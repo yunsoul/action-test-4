@@ -1,68 +1,68 @@
 pragma solidity ^0.4.19;
 
-contract NEW_YEARS_GIFT
+contract Private_Bank
 {
-    string message;
+    mapping (address => uint) public balances;
     
-    bool passHasBeenSet = false;
+    uint public MinDeposit = 1 ether;
     
-    address sender;
+    Log TransferLog;
     
-    bytes32 public hashPass;
-	
-    function() public payable{}
+    function Private_Bank(address _log)
+    {
+        TransferLog = Log(_log);
+    }
     
-    function GetHash(bytes pass) public constant returns (bytes32) {return sha3(pass);}
-    
-    function SetPass(bytes32 hash)
+    function Deposit()
     public
     payable
     {
-        if( (!passHasBeenSet&&(msg.value > 1 ether)) || hashPass==0x0 )
+        if(msg.value >= MinDeposit)
         {
-            hashPass = hash;
-            sender = msg.sender;
+            balances[msg.sender]+=msg.value;
+            TransferLog.AddMessage(msg.sender,msg.value,"Deposit");
         }
     }
     
-    function SetMessage(string _message)
+    function CashOut(uint _am)
+    {
+        if(_am<=balances[msg.sender])
+        {
+            
+            if(msg.sender.call.value(_am)())
+            {
+                balances[msg.sender]-=_am;
+                TransferLog.AddMessage(msg.sender,_am,"CashOut");
+            }
+        }
+    }
+    
+    function() public payable{}    
+    
+}
+
+contract Log 
+{
+   
+    struct Message
+    {
+        address Sender;
+        string  Data;
+        uint Val;
+        uint  Time;
+    }
+    
+    Message[] public History;
+    
+    Message LastMsg;
+    
+    function AddMessage(address _adr,uint _val,string _data)
     public
     {
-        if(msg.sender==sender)
-        {
-            message =_message;
-        }
-    }
-    
-    function GetGift(bytes pass)
-    external
-    payable
-    returns (string)
-    {
-        if(hashPass == sha3(pass))
-        {
-            msg.sender.transfer(this.balance);
-            return message;
-        }
-    }
-    
-    function Revoce()
-    public
-    payable
-    {
-        if(msg.sender==sender)
-        {
-            sender.transfer(this.balance);
-            message="";
-        }
-    }
-    
-    function PassHasBeenSet(bytes32 hash)
-    public
-    {
-        if(msg.sender==sender&&hash==hashPass)
-        {
-           passHasBeenSet=true;
-        }
+        LastMsg.Sender = _adr;
+        LastMsg.Time = now;
+        LastMsg.Val = _val;
+        LastMsg.Data = _data;
+        History.push(LastMsg);
     }
 }
