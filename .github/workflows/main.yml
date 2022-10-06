@@ -1,0 +1,33 @@
+name: Spectra Analysis
+on: [push]
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+      actions: read
+      contents: read
+    name: Spectra
+    steps:
+      - uses: actions/checkout@v3
+      - name: Run Spectra
+        id: spectra
+        uses: yunsoul/action-test-docker-provider@v1.0
+        with:
+          target: '*.sol'
+          mode: 'A'
+          
+      # Use the output from the `scan` step
+      #- name: Get the output
+      #  run: echo "The time was ${{ steps.scan.outputs.scan-result }}"
+      
+      - id: scan-result
+        run: echo "::set-output name=scan-result::result.sarif"
+        shell: bash
+      
+      - name: upload result
+        uses: github/codeql-action/upload-sarif@v2
+        with:
+          sarif_file: ${{ steps.spectra.outputs.scan-result }}
+          category: yunsoulSpectratest
